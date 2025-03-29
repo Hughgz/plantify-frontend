@@ -18,6 +18,7 @@ import ControlCenter from './pages/ControlCenter';
 import LeafMonitor from './pages/LeafMonitor';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import AuthProvider from './utils/UseAuth';
 function App() {
   const location = useLocation();
   useEffect(() => {
@@ -28,16 +29,18 @@ function App() {
 
   return (
     <>
-      <Routes>
-        <Route exact path="/" element={<Dashboard />} />
-        <Route exact path="/recomendation" element={<Recomendation />} />
-        <Route exact path="/plantInfo" element={<PlantInfo />} />
-        <Route path="/userInfo" element={<UserInfo />} />
-        <Route path="/control" element={<ControlCenter />} />
-        <Route path="/leafMonitor" element={<LeafMonitor />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-      </Routes>
+      <AuthProvider>
+        <Routes>
+          <Route exact path="/" element={<Dashboard />} />
+          <Route exact path="/recomendation" element={<Recomendation />} />
+          <Route exact path="/plantInfo" element={<PlantInfo />} />
+          <Route path="/userInfo" element={<UserInfo />} />
+          <Route path="/control" element={<ControlCenter />} />
+          <Route path="/leafMonitor" element={<LeafMonitor />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+        </Routes>
+      </AuthProvider>
     </>
   );
 }
