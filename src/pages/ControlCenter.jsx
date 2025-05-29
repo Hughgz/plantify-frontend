@@ -83,7 +83,7 @@ function ControlCenter() {
 
     const fetchLedControlSchedule = async () => {
         try {
-            const response = await fetch('http://localhost:8080/api/ledControl', {
+            const response = await fetch('https://plantify.info.vn/api/ledControl', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -109,7 +109,7 @@ function ControlCenter() {
 
     const fetchDeviceStatus = async () => {
         try {
-            const response = await fetch('http://localhost:8080/api/ledStatus', {
+            const response = await fetch('https://plantify.info.vn/api/ledStatus', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -135,7 +135,7 @@ function ControlCenter() {
 
     const fetchModeSetting = async () => {
         try {
-            const response = await fetch('http://localhost:8080/api/modeSetting', {
+            const response = await fetch('https://plantify.info.vn/api/modeSetting', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -154,7 +154,7 @@ function ControlCenter() {
         const modeValue = Object.keys(modeMap).find(key => modeMap[key] === newMode);
         try {
             const response = await fetch(
-                `http://localhost:8080/api/modeSetting/updateMode?mode=${modeValue}`,
+                `https://plantify.info.vn/api/modeSetting/updateMode?mode=${modeValue}`,
                 {
                     method: 'PUT',
                     headers: {
@@ -186,7 +186,7 @@ function ControlCenter() {
 
         try {
             const response = await fetch(
-                `http://localhost:8080/api/ledStatus/update?led=${ledName}&status=${statusValue}`, 
+                `https://plantify.info.vn/api/ledStatus/update?led=${ledName}&status=${statusValue}`, 
                 {
                     method: 'PUT',
                     headers: {
