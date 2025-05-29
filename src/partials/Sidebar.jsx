@@ -91,7 +91,7 @@ function Sidebar({
             className="flex items-center justify-center"
           >
             <img
-              src="src/images/Plantify_no_background.png"
+              src="https://res.cloudinary.com/dahzoj4fy/image/upload/v1748493089/fnhpnwys1umtpfrxatp0.png"
               alt="Plantify Logo"
               className="w-50 h-auto"
             />
