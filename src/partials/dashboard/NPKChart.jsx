@@ -6,55 +6,60 @@ import { chartAreaGradient } from '../../charts/ChartjsConfig';
 import { tailwindConfig, hexToRGB } from '../../utils/Utils';
 import RealTimeNPKChart from '../../charts/RealTimeNPKChart';
 
-function NPKChart() {
-  const data = [
-    { n: 20, p: 15, k: 10 },
-    { n: 21, p: 16, k: 11 },
-    { n: 22, p: 17, k: 12 },
-    { n: 23, p: 18, k: 13 },
-    { n: 24, p: 19, k: 14 },
-    { n: 25, p: 20, k: 15 },
-    { n: 26, p: 21, k: 16 },
-    { n: 25, p: 20, k: 15 },
-    { n: 24, p: 19, k: 14 },
-    { n: 23, p: 18, k: 13 },
-  ];
-
+function NPKChart({ sensorData }) {
   const [counter, setCounter] = useState(0);
   const [increment, setIncrement] = useState(0);
   const [range, setRange] = useState(6); // Hiển thị 6 mốc thời gian
-  const [slicedData, setSlicedData] = useState(data.slice(0, range));
+  const [slicedData, setSlicedData] = useState([]);
+  const [slicedLabels, setSlicedLabels] = useState([]);
+  const [currentValues, setCurrentValues] = useState({ n: 0, p: 0, k: 0 });
 
-  const generateDates = () => {
-    const now = new Date();
-    const dates = [];
-    for (let i = 0; i < data.length; i++) {
-      dates.push(new Date(now - i * 5000)); // Mỗi mốc cách nhau 5 giây
+  // Cập nhật dữ liệu khi sensorData thay đổi
+  useEffect(() => {
+    if (sensorData) {
+      // Lấy giá trị NPK từ dữ liệu cảm biến
+      const nitrogen = sensorData.nitrogen !== undefined ? parseFloat(sensorData.nitrogen) : 0;
+      const phosphorus = sensorData.phosphorus !== undefined ? parseFloat(sensorData.phosphorus) : 0;
+      const potassium = sensorData.potassium !== undefined ? parseFloat(sensorData.potassium) : 0;
+      
+      setCurrentValues({ n: nitrogen, p: phosphorus, k: potassium });
+      
+      // Thêm giá trị mới vào dữ liệu hiện tại
+      setSlicedData(prevData => {
+        // Nếu chưa có dữ liệu, tạo mảng mới với giá trị hiện tại
+        if (prevData.length === 0) {
+          return Array(range).fill({ n: nitrogen, p: phosphorus, k: potassium });
+        }
+        
+        // Nếu đã có dữ liệu, thêm giá trị mới vào cuối và loại bỏ giá trị đầu tiên
+        const newData = [...prevData.slice(1), { n: nitrogen, p: phosphorus, k: potassium }];
+        return newData;
+      });
+      
+      // Cập nhật nhãn thời gian
+      setSlicedLabels(prevLabels => {
+        const now = new Date();
+        
+        // Nếu chưa có nhãn, tạo mảng mới với thời gian hiện tại
+        if (prevLabels.length === 0) {
+          const labels = [];
+          for (let i = 0; i < range; i++) {
+            labels.push(new Date(now - (range - i - 1) * 5000));
+          }
+          return labels;
+        }
+        
+        // Nếu đã có nhãn, thêm thời gian mới vào cuối và loại bỏ nhãn đầu tiên
+        return [...prevLabels.slice(1), now];
+      });
     }
-    return dates;
-  };
-
-  const [slicedLabels, setSlicedLabels] = useState(generateDates().slice(0, range).reverse());
+  }, [sensorData, range]);
 
   useEffect(() => {
     const interval = setInterval(() => {
       setCounter(counter + 1);
     }, 5000); // Cập nhật mỗi 5 giây
     return () => clearInterval(interval);
-  }, [counter]);
-
-  useEffect(() => {
-    setIncrement(increment + 1);
-    if (increment + range < data.length) {
-      setSlicedData(([_, ...slicedData]) => [...slicedData, data[increment + range]]);
-    } else {
-      setIncrement(0);
-      setRange(6); // Reset lại range
-    }
-
-    setSlicedLabels(([_, ...slicedLabels]) => [...slicedLabels, new Date()]);
-    return () => setIncrement(0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [counter]);
 
   const chartData = {
@@ -92,16 +97,23 @@ function NPKChart() {
 
   return (
     <div className="flex flex-col col-span-full sm:col-span-6 bg-white dark:bg-gray-800 shadow-sm rounded-xl">
-      <header className="px-5 py-4 border-b border-gray-100 dark:border-gray-700/60 flex items-center">
-        <h2 className="font-semibold text-gray-800 dark:text-gray-100">Cảm biến NPK</h2>
-        <Tooltip className="ml-2">
-          <div className="text-xs text-center whitespace-nowrap">
-            Built with{' '}
-            <a className="underline" href="https://www.chartjs.org/" target="_blank" rel="noreferrer">
-              Chart.js
-            </a>
-          </div>
-        </Tooltip>
+      <header className="px-5 py-4 border-b border-gray-100 dark:border-gray-700/60 flex items-center justify-between">
+        <div className="flex items-center">
+          <h2 className="font-semibold text-gray-800 dark:text-gray-100">Cảm biến NPK</h2>
+          <Tooltip className="ml-2">
+            <div className="text-xs text-center whitespace-nowrap">
+              Built with{' '}
+              <a className="underline" href="https://www.chartjs.org/" target="_blank" rel="noreferrer">
+                Chart.js
+              </a>
+            </div>
+          </Tooltip>
+        </div>
+        <div className="flex space-x-3">
+          <div className="text-sm font-medium text-green-500">N: {currentValues.n} mg/kg</div>
+          <div className="text-sm font-medium text-yellow-500">P: {currentValues.p} mg/kg</div>
+          <div className="text-sm font-medium text-red-500">K: {currentValues.k} mg/kg</div>
+        </div>
       </header>
       <RealTimeNPKChart data={chartData} width={595} height={248} />
     </div>

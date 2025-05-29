@@ -19,6 +19,7 @@ import LeafMonitor from './pages/LeafMonitor';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import AuthProvider from './utils/UseAuth';
+import Analysis from './pages/Analysis';
 function App() {
   const location = useLocation();
   useEffect(() => {
@@ -39,6 +40,8 @@ function App() {
           <Route path="/leafMonitor" element={<LeafMonitor />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/analysis" element={<Analysis />} />
+
         </Routes>
       </AuthProvider>
     </>

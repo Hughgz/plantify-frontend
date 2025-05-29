@@ -5,7 +5,16 @@ import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet"; // Impor
 import "leaflet/dist/leaflet.css"; // CSS cho OpenStreetMap
 import { tailwindConfig } from "../../utils/Utils";
 import { variables } from '../../utils/variables';
+import { FaMapMarkerAlt, FaTemperatureHigh, FaWater, FaCloud, FaWind, FaSun, FaCloudRain, FaSnowflake } from 'react-icons/fa';
+import L from 'leaflet';
 
+// Fix cho icon Leaflet
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
 
 function WeatherChart() {
     const API_URL = variables.WEATHER;
@@ -82,83 +91,115 @@ function WeatherChart() {
         }
     };
 
-    // Dữ liệu cho biểu đồ nhiệt độ và độ ẩm
-    const temperatureData = weatherData ? [weatherData.main.temp] : [0];
-    const humidityData = weatherData ? [weatherData.main.humidity] : [0];
-
-    const chartData = {
-        labels: ["Hiện tại"],
-        datasets: [
-            {
-                label: "Nhiệt độ (°C)",
-                data: temperatureData,
-                fill: true,
-                borderColor: tailwindConfig().theme.colors.blue[500],
-                borderWidth: 2,
-                pointRadius: 5,
-                pointBackgroundColor: tailwindConfig().theme.colors.blue[500],
-            },
-            {
-                label: "Độ ẩm (%)",
-                data: humidityData,
-                fill: true,
-                borderColor: tailwindConfig().theme.colors.green[500],
-                borderWidth: 2,
-                pointRadius: 5,
-                pointBackgroundColor: tailwindConfig().theme.colors.green[500],
-            },
-        ],
+    // Hiển thị biểu tượng thời tiết phù hợp
+    const getWeatherIcon = (weatherCode) => {
+        if (!weatherCode) return <FaCloud />;
+        
+        if (weatherCode.includes('clear')) return <FaSun className="text-yellow-400" />;
+        if (weatherCode.includes('cloud')) return <FaCloud className="text-gray-400" />;
+        if (weatherCode.includes('rain') || weatherCode.includes('drizzle')) return <FaCloudRain className="text-blue-400" />;
+        if (weatherCode.includes('snow')) return <FaSnowflake className="text-blue-200" />;
+        
+        return <FaCloud className="text-gray-400" />;
     };
 
     return (
-        <div className="flex flex-col col-span-full sm:col-span-6 bg-white dark:bg-gray-800 shadow-sm rounded-xl">
-            <header className="px-5 py-4 border-b border-gray-100 dark:border-gray-700/60 flex items-center">
-                <h2 className="font-semibold text-gray-800 dark:text-gray-100">
-                    Thời tiết tại vị trí của bạn
-                </h2>
-                <Tooltip className="ml-2">
-                    <div className="text-xs text-center whitespace-nowrap">
-                        Built with{" "}
-                        <a
-                            className="underline"
-                            href="https://www.chartjs.org/"
-                            target="_blank"
-                            rel="noreferrer"
-                        >
-                            Chart.js
-                        </a>
+        <div className="flex flex-col h-full">
+            {loading ? (
+                <div className="flex items-center justify-center h-full p-8">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                </div>
+            ) : error ? (
+                <div className="flex items-center justify-center h-full p-8">
+                    <div className="text-center">
+                        <div className="text-red-500 text-4xl mb-4">⚠️</div>
+                        <p className="text-red-500">{error}</p>
                     </div>
-                </Tooltip>
-            </header>
-
-            <div className="p-5 text-center">
-                {loading ? (
-                    <p>Đang tải dữ liệu thời tiết...</p>
-                ) : error ? (
-                    <p className="text-red-500">{error}</p>
-                ) : weatherData ? (
-                    <>
-                        <h3 className="text-lg font-semibold">📍 {address}</h3>
-                        <p>Nhiệt độ: <strong>{weatherData.main.temp}°C</strong></p>
-                        <p>Độ ẩm: <strong>{weatherData.main.humidity}%</strong></p>
-                        <p>Mô tả: <strong>{weatherData.weather[0].description}</strong></p>
-                    </>
-                ) : (
-                    <p>Không có dữ liệu.</p>
-                )}
-            </div>
-
-            {/* Hiển thị bản đồ từ OpenStreetMap */}
-            {location.lat && location.lon && (
-                <MapContainer center={[location.lat, location.lon]} zoom={15} style={{ height: "300px", width: "100%" }}>
-                    <TileLayer
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    />
-                    <Marker position={[location.lat, location.lon]}>
-                        <Popup>📍 {address}</Popup>
-                    </Marker>
-                </MapContainer>
+                </div>
+            ) : weatherData ? (
+                <>
+                    <div className="p-6 flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-8">
+                        <div className="md:w-1/2">
+                            <div className="flex items-center mb-4">
+                                <FaMapMarkerAlt className="text-red-500 mr-2" />
+                                <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 truncate">{address}</h3>
+                            </div>
+                            
+                            <div className="flex items-center mb-4">
+                                <div className="text-5xl mr-4">
+                                    {getWeatherIcon(weatherData.weather[0].description.toLowerCase())}
+                                </div>
+                                <div>
+                                    <p className="text-3xl font-bold text-gray-800 dark:text-gray-100">{weatherData.main.temp}°C</p>
+                                    <p className="text-gray-500 dark:text-gray-400 capitalize">{weatherData.weather[0].description}</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4 md:w-1/2">
+                            <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg flex items-center">
+                                <FaTemperatureHigh className="text-red-500 mr-3 text-xl" />
+                                <div>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">Cảm giác như</p>
+                                    <p className="text-gray-800 dark:text-gray-100 font-bold">{weatherData.main.feels_like}°C</p>
+                                </div>
+                            </div>
+                            
+                            <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg flex items-center">
+                                <FaWater className="text-blue-500 mr-3 text-xl" />
+                                <div>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">Độ ẩm</p>
+                                    <p className="text-gray-800 dark:text-gray-100 font-bold">{weatherData.main.humidity}%</p>
+                                </div>
+                            </div>
+                            
+                            <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg flex items-center">
+                                <FaWind className="text-teal-500 mr-3 text-xl" />
+                                <div>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">Gió</p>
+                                    <p className="text-gray-800 dark:text-gray-100 font-bold">{weatherData.wind.speed} m/s</p>
+                                </div>
+                            </div>
+                            
+                            <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg flex items-center">
+                                <FaCloud className="text-gray-500 mr-3 text-xl" />
+                                <div>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">Mây</p>
+                                    <p className="text-gray-800 dark:text-gray-100 font-bold">{weatherData.clouds.all}%</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {/* Hiển thị bản đồ từ OpenStreetMap */}
+                    {location.lat && location.lon && (
+                        <div className="flex-grow">
+                            <MapContainer 
+                                center={[location.lat, location.lon]} 
+                                zoom={14} 
+                                style={{ height: "100%", width: "100%", minHeight: "250px" }}
+                                className="rounded-b-lg overflow-hidden z-0"
+                            >
+                                <TileLayer
+                                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                                />
+                                <Marker position={[location.lat, location.lon]}>
+                                    <Popup>
+                                        <div className="text-center">
+                                            <p className="font-bold">Vị trí hiện tại</p>
+                                            <p className="text-sm">{address}</p>
+                                        </div>
+                                    </Popup>
+                                </Marker>
+                            </MapContainer>
+                        </div>
+                    )}
+                </>
+            ) : (
+                <div className="flex items-center justify-center h-full p-8">
+                    <p className="text-gray-500 dark:text-gray-400">Đang tải dữ liệu thời tiết...</p>
+                </div>
             )}
         </div>
     );

@@ -6,28 +6,54 @@ import { chartAreaGradient } from '../../charts/ChartjsConfig';
 import { tailwindConfig, hexToRGB } from '../../utils/Utils';
 import RealTimeTempChart from '../../charts/RealTimeTempChart';
 
-function TemperatureChart() {
-  // Dữ liệu mô phỏng nhiệt độ (°C)
-  const data = [
-    22, 23, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 34, 33, 32, 31, 30, 29, 28, 27,
-  ];
-
+function TemperatureChart({ sensorData }) {
   // State để theo dõi dữ liệu thời gian thực
   const [counter, setCounter] = useState(0);
   const [increment, setIncrement] = useState(0);
   const [range, setRange] = useState(20);
-  const [slicedData, setSlicedData] = useState(data.slice(0, range));
+  const [slicedData, setSlicedData] = useState([]);
+  const [slicedLabels, setSlicedLabels] = useState([]);
+  const [currentValue, setCurrentValue] = useState(0);
 
-  // Tạo danh sách thời gian mô phỏng
-  const generateDates = () => {
-    const now = new Date();
-    const dates = [];
-    data.forEach((v, i) => {
-      dates.push(new Date(now - i * 2000)); // Mỗi điểm cách nhau 2 giây
-    });
-    return dates;
-  };
-  const [slicedLabels, setSlicedLabels] = useState(generateDates().slice(0, range).reverse());
+  // Cập nhật dữ liệu khi sensorData thay đổi
+  useEffect(() => {
+    if (sensorData) {
+      // Lấy giá trị nhiệt độ từ dữ liệu cảm biến
+      const temperature = sensorData.temperature !== undefined ? 
+        parseFloat(sensorData.temperature) : 0;
+      
+      setCurrentValue(temperature);
+      
+      // Thêm giá trị mới vào dữ liệu hiện tại
+      setSlicedData(prevData => {
+        // Nếu chưa có dữ liệu, tạo mảng mới với giá trị hiện tại
+        if (prevData.length === 0) {
+          return Array(range).fill(temperature);
+        }
+        
+        // Nếu đã có dữ liệu, thêm giá trị mới vào cuối và loại bỏ giá trị đầu tiên
+        const newData = [...prevData.slice(1), temperature];
+        return newData;
+      });
+      
+      // Cập nhật nhãn thời gian
+      setSlicedLabels(prevLabels => {
+        const now = new Date();
+        
+        // Nếu chưa có nhãn, tạo mảng mới với thời gian hiện tại
+        if (prevLabels.length === 0) {
+          const labels = [];
+          for (let i = 0; i < range; i++) {
+            labels.push(new Date(now - (range - i - 1) * 2000));
+          }
+          return labels;
+        }
+        
+        // Nếu đã có nhãn, thêm thời gian mới vào cuối và loại bỏ nhãn đầu tiên
+        return [...prevLabels.slice(1), now];
+      });
+    }
+  }, [sensorData, range]);
 
   // Cập nhật dữ liệu mỗi 2 giây
   useEffect(() => {
@@ -35,19 +61,6 @@ function TemperatureChart() {
       setCounter(counter + 1);
     }, 2000);
     return () => clearInterval(interval);
-  }, [counter]);
-
-  useEffect(() => {
-    setIncrement(increment + 1);
-    if (increment + range < data.length) {
-      setSlicedData(([x, ...slicedData]) => [...slicedData, data[increment + range]]);
-    } else {
-      setIncrement(0);
-      setRange(0);
-    }
-    setSlicedLabels(([x, ...slicedLabels]) => [...slicedLabels, new Date()]);
-    return () => setIncrement(0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [counter]);
 
   // Dữ liệu cho biểu đồ
@@ -82,16 +95,21 @@ function TemperatureChart() {
   return (
     <div className="flex flex-col col-span-full sm:col-span-6 bg-white dark:bg-gray-800 shadow-sm rounded-xl">
       {/* Header */}
-      <header className="px-5 py-4 border-b border-gray-100 dark:border-gray-700/60 flex items-center">
-        <h2 className="font-semibold text-gray-800 dark:text-gray-100">Cảm biến nhiệt độ</h2>
-        <Tooltip className="ml-2">
-          <div className="text-xs text-center whitespace-nowrap">
-            Built with{' '}
-            <a className="underline" href="https://www.chartjs.org/" target="_blank" rel="noreferrer">
-              Chart.js
-            </a>
-          </div>
-        </Tooltip>
+      <header className="px-5 py-4 border-b border-gray-100 dark:border-gray-700/60 flex items-center justify-between">
+        <div className="flex items-center">
+          <h2 className="font-semibold text-gray-800 dark:text-gray-100">Cảm biến nhiệt độ</h2>
+          <Tooltip className="ml-2">
+            <div className="text-xs text-center whitespace-nowrap">
+              Built with{' '}
+              <a className="underline" href="https://www.chartjs.org/" target="_blank" rel="noreferrer">
+                Chart.js
+              </a>
+            </div>
+          </Tooltip>
+        </div>
+        <div className="text-xl font-bold text-violet-500">
+          {currentValue}°C
+        </div>
       </header>
 
       {/* Biểu đồ thời gian thực */}
