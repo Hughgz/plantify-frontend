@@ -25,7 +25,7 @@ export const loginUser = createAsyncThunk(
       }
 
       const data = await response.json();
-      if (!data.token || !data.user || !data.refreshToken) {
+      if (!data.token || !data.user) {
         throw new Error("Dữ liệu phản hồi không hợp lệ từ server.");
       }
 

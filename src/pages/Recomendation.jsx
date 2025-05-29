@@ -17,10 +17,33 @@ function Recomendation() {
     Rainfall: "",
   });
   const [result, setResult] = useState(null);
-
+  
   // Dùng useRef để lưu thời gian gọi API gần nhất
   const lastPredictTimeRef = useRef(null);
-
+  const cropDict = {
+    1: "Cây lúa",
+    2: "Cây ngô",
+    3: "Cây đai",
+    4: "Cây bông",
+    5: "Cây dừa",
+    6: "Đu đủ",
+    7: "Cam",
+    8: "Táo",
+    9: "Dưa lưới",
+    10: "Dưa hấu",
+    11: "Cây nho",
+    12: "Cây Xoài",
+    13: "Chuối",
+    14: "Lựu",
+    15: "Đậu lăng",
+    16: "Đậu đen",
+    17: "Đậu xanh",
+    18: "Đậu mèo",
+    19: "Đậu tằm",
+    20: "Đậu thận",
+    21: "Đậu gà",
+    22: "Cây cà phê"
+  };
   useEffect(() => {
     const fetchSensorData = async () => {
       try {
@@ -55,12 +78,22 @@ function Recomendation() {
   useEffect(() => {
     const predictPlantRecommendation = async () => {
       try {
+        const parsedData = {
+          Nitrogen: parseFloat(formData.Nitrogen) || 0,
+          Phosphorus: parseFloat(formData.Phosphorus) || 0,
+          Potassium: parseFloat(formData.Potassium) || 0,
+          Temperature: parseFloat(formData.Temperature) || 0,
+          Humidity: parseFloat(formData.Humidity) || 0,
+          Ph: parseFloat(formData.Ph) || 0,
+          Rainfall: parseFloat(formData.Rainfall) || 0,
+        };
+
         const response = await fetch(PREDICT_API_URL, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(formData),
+          body: JSON.stringify(parsedData),
         });
 
         if (!response.ok) {
@@ -102,9 +135,9 @@ function Recomendation() {
                   🌱 Khuyến nghị cây trồng
                 </h2>
                 {result ? (
-                  <div className="mt-6 bg-gray-800 text-white p-6 rounded-lg shadow-lg">
-                    <h5 className="text-xl font-semibold">Cây trồng được đề xuất:</h5>
-                    <p className="mt-4">{result}</p>
+                  <div className="mt-6 bg-white text-gray-800 p-6 rounded-xl shadow-md border border-gray-200">
+                    <h5 className="text-xl font-semibold mb-2">🌿 Cây trồng được đề xuất:</h5>
+                    <p className="text-lg">{cropDict[result]}</p>
                   </div>
                 ) : (
                   <p className="text-gray-500">Đang lấy dữ liệu...</p>

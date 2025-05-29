@@ -204,6 +204,29 @@ function ControlCenter() {
                 setMotorStatus(newControls);
                 localStorage.setItem("manualControls", JSON.stringify(newControls));
                 notify.success(`Đã ${newStatus ? 'bật' : 'tắt'} ${device}!`);
+                
+                // If the device is the Camera, also toggle the Python camera
+                if (device === "Camera") {
+                    try {
+                        const pythonResponse = await fetch('http://127.0.0.1:5000/toggle_camera', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ status: newStatus }),
+                        });
+                        
+                        if (pythonResponse.ok) {
+                            const result = await pythonResponse.json();
+                            console.log('Python camera toggle response:', result);
+                        } else {
+                            console.error('Failed to toggle Python camera:', await pythonResponse.text());
+                        }
+                    } catch (pythonError) {
+                        console.error('Error connecting to Python server:', pythonError);
+                        notify.warning('Kết nối tới máy chủ camera thất bại, nhưng trạng thái đã được cập nhật.');
+                    }
+                }
             } else {
                 notify.error(`Không thể cập nhật trạng thái ${device}!`);
             }
