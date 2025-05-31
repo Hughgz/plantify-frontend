@@ -7,6 +7,54 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchSensorReadings } from '../store/sensorReadingSlice';
 import { FaLightbulb, FaTint, FaThermometerHalf, FaVideo, FaCloudRain, FaRegClock, FaSlidersH, FaCheck } from 'react-icons/fa';
 
+// CSS để đảm bảo input time hiển thị định dạng 24 giờ
+const timeInputStyle = {
+    WebkitAppearance: 'textfield',
+    MozAppearance: 'textfield',
+    appearance: 'textfield'
+};
+
+// Hàm chuyển đổi từ định dạng 12 giờ sang 24 giờ
+const convertTo24Hour = (timeStr) => {
+    if (!timeStr) return timeStr;
+    
+    // Kiểm tra nếu đã ở định dạng 24 giờ (không có AM/PM)
+    if (!timeStr.toLowerCase().includes('am') && !timeStr.toLowerCase().includes('pm')) {
+        return timeStr;
+    }
+    
+    const [time, modifier] = timeStr.split(' ');
+    let [hours, minutes] = time.split(':');
+    
+    if (hours === '12') {
+        hours = modifier.toLowerCase() === 'am' ? '00' : '12';
+    } else if (modifier.toLowerCase() === 'pm') {
+        hours = String(parseInt(hours, 10) + 12);
+    }
+    
+    return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
+};
+
+// Hàm chuyển đổi từ định dạng 24 giờ sang 12 giờ (thêm AM/PM)
+const convertTo12Hour = (timeStr) => {
+    if (!timeStr) return timeStr;
+    
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    let period = 'AM';
+    let hour = hours;
+    
+    if (hours >= 12) {
+        period = 'PM';
+        hour = hours === 12 ? 12 : hours - 12;
+    }
+    
+    if (hours === 0) {
+        hour = 12;
+    }
+    
+    return `${String(hour).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ${period}`;
+};
+
 function ControlCenter() {
     const dispatch = useDispatch();
     const sensorReadings = useSelector(state => state.sensorReading.readings);
@@ -133,8 +181,30 @@ function ControlCenter() {
             const newSchedule = {};
             data.forEach(item => {
                 const deviceName = ledToDeviceMap[item.ledName];
-                const onTime = `${String(item.turnOnTime[0]).padStart(2, '0')}:${String(item.turnOnTime[1]).padStart(2, '0')}`;
-                const offTime = `${String(item.turnOffTime[0]).padStart(2, '0')}:${String(item.turnOffTime[1]).padStart(2, '0')}`;
+                
+                // Lấy ra giá trị thời gian từ server
+                let onTime, offTime;
+                
+                // Kiểm tra định dạng thời gian từ server
+                if (Array.isArray(item.turnOnTime)) {
+                    // Nếu nhận được dạng mảng [giờ, phút] hoặc [giờ, phút, giây]
+                    onTime = `${String(item.turnOnTime[0]).padStart(2, '0')}:${String(item.turnOnTime[1]).padStart(2, '0')}`;
+                    offTime = `${String(item.turnOffTime[0]).padStart(2, '0')}:${String(item.turnOffTime[1]).padStart(2, '0')}`;
+                } else if (typeof item.turnOnTime === 'string') {
+                    // Nếu nhận được dạng chuỗi (có thể là "HH:MM:SS")
+                    onTime = item.turnOnTime.split(':').slice(0, 2).join(':');
+                    offTime = item.turnOffTime.split(':').slice(0, 2).join(':');
+                } else {
+                    // Xử lý trường hợp khác (có thể là đối tượng)
+                    console.log("Unexpected time format:", item.turnOnTime);
+                    onTime = "00:00";
+                    offTime = "00:00";
+                }
+                
+                // Xử lý đặc biệt cho 24:00
+                if (onTime === "24:00") onTime = "23:59";
+                if (offTime === "24:00") offTime = "23:59";
+
                 newSchedule[deviceName] = { on: onTime, off: offTime };
             });
             
@@ -275,9 +345,105 @@ function ControlCenter() {
         }
     };
 
-    const saveSchedule = () => {
-        localStorage.setItem("schedule", JSON.stringify(schedule));
-        notify.success("Đã lưu lịch trình thành công!");
+    const saveSchedule = async () => {
+        try {
+            // Xử lý từng thiết bị riêng biệt
+            for (const device of Object.keys(schedule)) {
+                const ledName = deviceToLedMap[device];
+                
+                // Ánh xạ tên LED sang ID cố định dựa trên dữ liệu từ hình
+                let ledId;
+                switch (ledName) {
+                    case 'led1': ledId = 1; break;
+                    case 'led2': ledId = 2; break;
+                    case 'led3': ledId = 3; break;
+                    case 'led4': ledId = 4; break;
+                    default: ledId = null;
+                }
+                
+                console.log(`Processing device: ${device}, ledName: ${ledName}, ledId: ${ledId}`);
+                
+                // Chuyển đổi thời gian từ định dạng 12 giờ sang 24 giờ
+                const onTime = convertTo24Hour(schedule[device].on);
+                const offTime = convertTo24Hour(schedule[device].off);
+                
+                console.log(`Original times - on: ${schedule[device].on}, off: ${schedule[device].off}`);
+                console.log(`Converted times - on: ${onTime}, off: ${offTime}`);
+                
+                // Tách giờ và phút
+                const [onHours, onMinutes] = onTime.split(':').map(Number);
+                const [offHours, offMinutes] = offTime.split(':').map(Number);
+                
+                // Đảm bảo định dạng thời gian chỉ là HH:mm (không có giây)
+                const formatTime = (timeStr) => {
+                    if (!timeStr) return timeStr;
+                    
+                    // Nếu thời gian có chứa dấu hai chấm, lấy ra chỉ giờ và phút
+                    if (timeStr.includes(':')) {
+                        const parts = timeStr.split(':');
+                        return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+                    }
+                    
+                    return timeStr;
+                };
+                
+                // Xử lý trường hợp 24:00, đổi thành 23:59
+                const handleSpecialTime = (timeStr) => {
+                    if (timeStr === "24:00") return "23:59";
+                    return timeStr;
+                };
+                
+                // Tạo đúng định dạng cho turnOnTime và turnOffTime theo yêu cầu của server
+                const formattedOnTime = formatTime(onTime);
+                const formattedOffTime = formatTime(offTime);
+                
+                const finalOnTime = handleSpecialTime(formattedOnTime);
+                const finalOffTime = handleSpecialTime(formattedOffTime);
+                
+                // Tạo đúng định dạng cho turnOnTime và turnOffTime theo yêu cầu của server
+                const ledControlDto = {
+                    id: ledId, // Thêm ID cố định dựa trên LED
+                    ledName,
+                    turnOnTime: finalOnTime,
+                    turnOffTime: finalOffTime
+                };
+                
+                console.log('Sending data to server:', JSON.stringify(ledControlDto, null, 2));
+                
+                try {
+                    // Gửi dữ liệu với JSON đã biết hoạt động
+                    const response = await fetch(variables.LED_CONTROL_UPDATE, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(ledControlDto),
+                    });
+                    
+                    // Xử lý phản hồi
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => response.text());
+                        console.error(`Error response for ${device}:`, errorData);
+                        notify.error(`Không thể cập nhật lịch trình cho ${device}!`);
+                        return;
+                    }
+                } catch (fetchError) {
+                    console.error(`Network error for ${device}:`, fetchError);
+                    notify.error(`Lỗi kết nối khi cập nhật ${device}!`);
+                    return;
+                }
+            }
+            
+            // Lưu lịch trình vào localStorage
+            localStorage.setItem("schedule", JSON.stringify(schedule));
+            notify.success("Đã lưu lịch trình thành công!");
+            
+            // Cập nhật lại lịch trình từ server
+            await fetchLedControlSchedule();
+        } catch (error) {
+            console.error('Error saving schedule:', error);
+            notify.error("Lỗi khi lưu lịch trình!");
+        }
     };
 
     return (
@@ -457,6 +623,18 @@ function ControlCenter() {
                                 Thiết lập lịch trình
                             </h2>
                             <div className="overflow-x-auto">
+                                <div className="mb-4 flex justify-end">
+                                    <div className="bg-blue-50 dark:bg-blue-900/30 p-3 rounded-lg text-sm">
+                                        <p className="text-blue-700 dark:text-blue-300 mb-1 font-medium">
+                                            <FaRegClock className="inline mr-1" /> Thông tin về thời gian:
+                                        </p>
+                                        <ul className="list-disc pl-5 text-blue-600 dark:text-blue-400">
+                                            <li>Chọn thời gian theo định dạng 12 giờ (AM/PM) sẽ tự động chuyển đổi sang 24 giờ khi lưu</li>
+                                            <li>Giá trị hiển thị bên dưới mỗi ô nhập theo cả định dạng 24 giờ và 12 giờ (AM/PM)</li>
+                                            <li>Hệ thống sẽ luôn lưu trữ ở định dạng 24 giờ: 11:00 PM = 23:00</li>
+                                        </ul>
+                                    </div>
+                                </div>
                                 <table className="w-full text-left rounded-lg overflow-hidden">
                                     <thead className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-200">
                                         <tr>
@@ -486,10 +664,15 @@ function ControlCenter() {
                                                             type="time" 
                                                             className="pl-8 p-2 w-full border rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" 
                                                             value={schedule[device].on} 
-                                                            onChange={(e) => setSchedule(prev => ({ 
-                                                                ...prev, 
-                                                                [device]: { ...prev[device], on: e.target.value } 
-                                                            }))} 
+                                                            onChange={(e) => {
+                                                                // Đảm bảo chỉ lấy HH:mm
+                                                                const newTime = e.target.value.split(':').slice(0, 2).join(':');
+                                                                setSchedule(prev => ({ 
+                                                                    ...prev, 
+                                                                    [device]: { ...prev[device], on: newTime } 
+                                                                }))
+                                                            }}
+                                                            step="60" // Chỉ cho phép chọn phút, không có giây
                                                         />
                                                     </div>
                                                 </td>
@@ -504,14 +687,19 @@ function ControlCenter() {
                                                             type="time" 
                                                             className="pl-8 p-2 w-full border rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" 
                                                             value={schedule[device].off} 
-                                                            onChange={(e) => setSchedule(prev => ({ 
-                                                                ...prev, 
-                                                                [device]: { ...prev[device], off: e.target.value } 
-                                                            }))} 
+                                                            onChange={(e) => {
+                                                                // Đảm bảo chỉ lấy HH:mm
+                                                                const newTime = e.target.value.split(':').slice(0, 2).join(':');
+                                                                setSchedule(prev => ({ 
+                                                                    ...prev, 
+                                                                    [device]: { ...prev[device], off: newTime } 
+                                                                }))
+                                                            }}
+                                                            step="60" // Chỉ cho phép chọn phút, không có giây
                                                         />
                                                     </div>
                                                 </td>
-                                                <td className="p-3">
+                                                <td className="p-3">    
                                                     <button 
                                                         onClick={saveSchedule} 
                                                         className="flex items-center px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all duration-200 shadow hover:-translate-y-1"
