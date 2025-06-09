@@ -7,7 +7,7 @@ import { FaLeaf, FaThermometerHalf, FaTint, FaFlask, FaVial, FaRainbow, FaSync, 
 function Recomendation() {
   const API_URL = variables.SENSOR_READING_LATEST;
   const PREDICT_API_URL = variables.PREDICT_API_URL;
-  const DIRECT_PREDICT_URL = "http://127.0.0.1:5000/predict";
+  const DIRECT_PREDICT_URL = "https://api.plantify.info.vn/predict";
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [formData, setFormData] = useState({
     Nitrogen: "",

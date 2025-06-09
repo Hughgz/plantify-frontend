@@ -6,7 +6,7 @@ export const variables = {
     SENSOR_READING_LATEST10: "https://plantify.info.vn/api/sensorReading/latest10",
     PLANT: "https://plantify.info.vn/api/plants",
     WEATHER: "https://plantify.info.vn/api/weather",
-    PREDICT_API_URL: "http://127.0.0.1:5000/predict",
+    PREDICT_API_URL: "https://api.plantify.info.vn/predict",
     LED_CONTROL: "https://plantify.info.vn/api/ledControl",
     LED_CONTROL_UPDATE: "https://plantify.info.vn/api/ledControl/updateLedControl",
     LED_STATUS: "https://plantify.info.vn/api/ledStatus",
